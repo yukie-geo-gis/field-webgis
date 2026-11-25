@@ -32,6 +32,21 @@ window.FIELD_CONFIG = {
         ]
       ]
     },
+    "contours_1m": {
+      "minZoom": 16,
+      "maxZoom": 18,
+      "extension": "png",
+      "bounds": [
+        [
+          34.77433178948767,
+          133.43719482421875
+        ],
+        [
+          34.79237826089951,
+          133.46328735351562
+        ]
+      ]
+    },
     "labels": {
       "minZoom": 15,
       "maxZoom": 18,
@@ -47,5 +62,6 @@ window.FIELD_CONFIG = {
         ]
       ]
     }
-  }
+  },
+  "revision": "2026-11-25T06:38:05.575Z"
 };

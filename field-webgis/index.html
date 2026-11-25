@@ -30,14 +30,15 @@
 <label class="layer"><span><strong>微地形表現図</strong><small id="terrainInfo">タイル未設定</small></span><input class="switch" type="checkbox" id="terrainSwitch" disabled></label>
 <div class="opacity"><label for="terrainOpacity">微地形表現図の不透明度 <output id="opacityValue">80%</output></label><input type="range" id="terrainOpacity" min="0" max="100" step="5" value="80" disabled></div>
 <label class="layer"><span><strong>コンター</strong><small id="contoursInfo">タイル未設定</small></span><input class="switch" type="checkbox" id="contoursSwitch" disabled></label>
+<label class="layer"><span><strong>詳細コンター（1m間隔）</strong><small id="contours_1mInfo">タイル未設定</small></span><input class="switch" type="checkbox" id="contours_1mSwitch" disabled></label>
 <label class="layer"><span><strong>コンター標高値</strong><small id="labelsInfo">タイル未設定</small></span><input class="switch" type="checkbox" id="labelsSwitch" disabled></label>
-<p id="panelNote" class="panel-note">標高値は拡大時に表示します。不要なレイヤをOFFにすると通信量を抑えられます。</p>
+<p id="panelNote" class="panel-note">詳細コンターと標高値は拡大時に表示します。不要なレイヤをOFFにすると通信量を抑えられます。</p>
 </section>
 <div id="errorBanner" role="status" hidden></div>
 </main>
 <footer id="status"><div class="status-line"><span id="gpsState" aria-live="polite">現在地：OFF</span><span id="zoomLevel">Z —</span></div><div id="mapState" aria-live="polite">地図を準備しています…</div></footer>
 </div>
-<script src="./config.js"></script>
+<script src="./config.js?v=2"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 <script>
 (() => {
@@ -53,13 +54,14 @@ const map = L.map('map',{minZoom:4,maxZoom:22,zoomControl:true,preferCanvas:true
 map.attributionControl.setPrefix('<a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a>');
 map.createPane('terrainPane').style.zIndex=410;
 map.createPane('contoursPane').style.zIndex=420;
+map.createPane('contours_1mPane').style.zIndex=415;
 map.createPane('labelsPane').style.zIndex=430;
 map.createPane('gpsPane').style.zIndex=650;
-['terrainPane','contoursPane','labelsPane','gpsPane'].forEach(n => map.getPane(n).style.pointerEvents='none');
+['terrainPane','contoursPane','contours_1mPane','labelsPane','gpsPane'].forEach(n => map.getPane(n).style.pointerEvents='none');
 const basic={tileSize:256,noWrap:true,updateWhenIdle:true,updateWhenZooming:false,keepBuffer:1,maxZoom:22};
 const base=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{...basic,minZoom:4,maxNativeZoom:18,attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>'});
 const entries={}; const homeBounds=L.latLngBounds([]);
-const specs={terrain:{name:'微地形表現図',pane:'terrainPane',opacity:0.8,initial:true},contours:{name:'コンター',pane:'contoursPane',opacity:1,initial:true},labels:{name:'コンター標高値',pane:'labelsPane',opacity:1,initial:false}};
+const specs={terrain:{name:'微地形表現図',pane:'terrainPane',opacity:0.8,initial:true},contours:{name:'コンター',pane:'contoursPane',opacity:1,initial:true},contours_1m:{name:'詳細コンター（1m）',pane:'contours_1mPane',opacity:1,initial:false},labels:{name:'コンター標高値',pane:'labelsPane',opacity:1,initial:false}};
 function parseBounds(b){if(!Array.isArray(b)||b.length!==2||!b.every(p=>Array.isArray(p)&&p.length===2&&p.every(Number.isFinite)))return null;if(b[0][0]>=b[1][0]||b[0][1]>=b[1][1]||b[0][0]<-85.1||b[1][0]>85.1||b[0][1]<-180||b[1][1]>180)return null;return L.latLngBounds(b);}
 let networkErrors=new Set();
 function monitor(layer,key,name){layer.on('loading',()=>{networkErrors.delete(key);});layer.on('tileerror',()=>{networkErrors.add(key);refresh();});layer.on('load',refresh);layer.on('remove',()=>{networkErrors.delete(key);refresh();});}
@@ -85,7 +87,8 @@ for(const [key,spec] of Object.entries(specs)){
   if(!c||!b||!Number.isInteger(c.minZoom)||!Number.isInteger(c.maxZoom)||c.minZoom<0||c.maxZoom>22||c.minZoom>c.maxZoom)continue;
   const ext=['png','jpg','jpeg','webp'].includes(c.extension)?c.extension:'png';
   const min=c.minZoom;const max=c.maxZoom;
-  const layer=L.tileLayer('./tiles/'+key+'/{z}/{x}/{y}.'+ext,{...basic,pane:spec.pane,opacity:spec.opacity,minZoom:min,maxNativeZoom:max,bounds:b});
+  const version=typeof cfg.revision==='string'?'?v='+encodeURIComponent(cfg.revision):'';
+  const layer=L.tileLayer('./tiles/'+key+'/{z}/{x}/{y}.'+ext+version,{...basic,pane:spec.pane,opacity:spec.opacity,minZoom:min,maxNativeZoom:max,bounds:b});
   const input=$(key+'Switch'),info=$(key+'Info');input.disabled=false;input.checked=spec.initial;
   entries[key]={layer,input,info,bounds:b,min,max,name:spec.name};homeBounds.extend(b);monitor(layer,key,spec.name);
   input.addEventListener('change',()=>{if(input.checked)layer.addTo(map);else map.removeLayer(layer);refresh();});
